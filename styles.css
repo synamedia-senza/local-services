@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap');
+
+body {
+	margin: 0px;
+	background-color: black;
+  overflow: hidden;
+}
+
+#main {
+	width: 1920px;
+	height: 1080px;
+	background-color: #005eb8;
+}
+
+#grid {
+	margin-left: auto;
+	margin-right: auto;
+	border-spacing: 50px 50px;
+}
+
+td {
+	vertical-align: middle;
+}
+
+.cell {
+	width: 500px;
+	height: 400px;
+  color: black;
+	background-color: white;
+	font: 80pt 'Source Sans Pro'; 
+	font-weight: bold;
+  margin: 30px;
+  border-radius: 20px;
+  vertical-align: top;
+}
+
+.selected {
+  box-shadow: 0 0 0 15px #ADD8E6;
+}
+
+.emoji {
+  margin: 20px 0px -30px 30px;
+  font: 60pt 'Apple Color Emoji', 'Noto Color Emoji'; 
+}
+
+#header {
+  padding-top: 30px;
+  text-align: center;
+  font: 60pt 'Source Sans Pro'; 
+	font-weight: bold;
+  color: white;
+}
+
+.name {
+  margin: 30px;
+  font: 40pt 'Source Sans Pro'; 
+  line-height: 1.0em;
+	font-weight: bold;
+}
+
+.content {
+  margin: 0px 30px 30px 30px;
+  font: 24pt 'Source Sans Pro'; 
+  line-height: 1.2em;
+}

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Map</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html, body { 
+      height: 100%; 
+      margin: 0; 
+      overflow: hidden;
+    }
+    #map { 
+      height: 100%;
+      transform: scale(2);
+     }
+    .notice {
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+      background: #fff; padding: 8px 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.15);
+      font: 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      z-index: 2;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="msg" class="notice" hidden></div>
+
+  <!-- Load the Maps JS API (add your browser key, restricted to your domain) -->
+  <script type="text/javascript" src="config.js"></script>
+  <script>
+    document.addEventListener("keydown", function(event) {
+      if (event.key === "Escape") {
+        history.back();
+      }
+      event.preventDefault();
+    });
+
+    function loadGoogleMaps(apiKey) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src =
+          `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=beta&libraries=places`;
+        script.async = true;
+        script.defer = true;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    // --- Utilities ---
+    const params = new URLSearchParams(location.search);
+    const get = (k, d = "") => params.get(k) ?? d;
+
+    function cleanTitle(str) {
+      return String(str)
+        .replace(/\s*\([^)]*\)/g, "")  // remove "(...)"
+        .replace(/ - /g, " ")          // " - " -> " "
+        .replace(/\s{2,}/g, " ")
+        .trim();
+    }
+
+    function showMessage(text) {
+      const el = document.getElementById("msg");
+      el.textContent = text;
+      el.hidden = !text;
+      if (text) setTimeout(() => (el.hidden = true), 3500);
+    }
+
+    function toLatLngLiteral(loc) {
+      if (!loc) return null;
+      if (typeof loc.lat === "function") return { lat: loc.lat(), lng: loc.lng() };
+      if ("lat" in loc && "lng" in loc) return { lat: Number(loc.lat), lng: Number(loc.lng) };
+      if ("latLng" in loc && loc.latLng) return loc.latLng;
+      return null;
+    }
+
+    // --- Map rendering ---
+    let map, marker, infoWindow;
+
+    async function init() {
+      await loadGoogleMaps(googleMapsAPIKey);
+      // Now the API is loaded
+      const { Map } = await google.maps.importLibrary("maps");
+      const { Place } = await google.maps.importLibrary("places");
+
+      const placeId = get("id");
+      let name = get("name");
+      let address = get("address");
+      let phone = get("phone");
+      let position = null;
+
+      // Preferred path: fetch by place_id so coords & details are correct/fresh
+      if (placeId) {
+        try {
+          const place = new Place({ id: placeId, requestedLanguage: "en" });
+          await place.fetchFields({
+            fields: ["displayName", "formattedAddress", "location", "nationalPhoneNumber"]
+          });
+          position = toLatLngLiteral(place.location);
+          name = cleanTitle(place.displayName?.text || place.displayName || name || "Selected place");
+          address = place.formattedAddress || address || "";
+          phone = place.nationalPhoneNumber || phone || "";
+        } catch (e) {
+          console.error(e);
+          showMessage("Couldn’t load that place. Falling back to URL coordinates (if provided).");
+        }
+      }
+
+      // Fallback: use lat/lng + optional text from query params
+      if (!position) {
+        const lat = Number(get("lat"));
+        const lng = Number(get("lng"));
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          position = { lat, lng };
+          name = cleanTitle(name || "Selected location");
+        } else {
+          showMessage("Missing place_id or lat/lng in URL.");
+          return;
+        }
+      }
+
+      (async () => {
+        try {
+
+          // Initialize map
+          const map = new google.maps.Map(document.getElementById("map"), {
+            center: position,
+            zoom: 15,
+            // mapId: "YOUR_MAP_ID", // optional
+            clickableIcons: false
+          });
+
+          marker = new google.maps.Marker({ position, map });
+          infoWindow = new google.maps.InfoWindow();
+
+          const html = `
+            <div style="max-width:260px">
+              <strong>${name}</strong><br>
+              ${address ? `${address}<br>` : ""}${phone ? `${phone}` : ""}
+            </div>
+          `;
+          infoWindow.setContent(html);
+          infoWindow.open({ anchor: marker, map });
+
+          // Re-open on marker click
+          marker.addListener("click", () => {
+            infoWindow.open({ anchor: marker, map });
+          });
+        } catch (err) {
+          console.error("Google Maps failed to load:", err);
+        }
+      })();
+     }
+
+    init();
+  </script>
+</body>
+</html>
